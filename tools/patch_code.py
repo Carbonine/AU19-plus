@@ -8,6 +8,7 @@ NAME = "AmongUs2019_WebGL.wasm.code.unityweb"
 SRC = os.path.join(os.path.dirname(ROOT), "AmongUs2019", "Build", NAME)
 DST = os.path.join(ROOT, "Build", NAME)
 
+F_SET_TEXT = 29821
 F_SET_COLOR = 29837
 F_UPDATE = 30941
 F_GET_RENDERER = 32277
@@ -18,10 +19,14 @@ F_SET_ENABLED = 51757
 
 OFF_USERNAME_TEXT = 36
 OFF_SRENDERER = 32
+OFF_GAME_CONTROLLER = 52
 OFF_IS_DEAD = 56
 OFF_IS_IMPOSTOR = 80
+OFF_COLOR_NAME = 148
 OFF_VENTING = 152
 OFF_INSIDE_VENT = 153
+OFF_STATIC_FIELDS = 92
+PLAYER_TYPEINFO = 3617732
 STACK_PTR = 7
 
 
@@ -72,8 +77,10 @@ def call(f): return b"\x10" + uleb(f)
 
 
 I32_ADD = b"\x6a"
+I32_AND = b"\x71"
 I32_OR = b"\x72"
 I32_EQZ = b"\x45"
+I32_NE = b"\x47"
 SELECT = b"\x1b"
 IF_VOID = b"\x04\x40"
 END = b"\x0b"
@@ -83,8 +90,26 @@ def name_tags(nparams, first_local):
     this = local_get(0)
     lbl = first_local
     sp = first_local + 1
-    impostor = this + i32_load8_u(OFF_IS_IMPOSTOR)
-    green_blue = f32_const(0.0) + f32_const(1.0) + impostor + SELECT
+    red = first_local + 2
+    local_impostor = (
+        i32_const(0) + i32_load(PLAYER_TYPEINFO) + local_set(red)
+        + local_get(red) + IF_VOID + local_get(red) + i32_load(OFF_STATIC_FIELDS) + local_set(red) + END
+        + local_get(red) + IF_VOID + local_get(red) + i32_load(0) + local_set(red) + END
+        + local_get(red) + IF_VOID + local_get(red) + i32_load8_u(OFF_IS_IMPOSTOR) + local_set(red) + END
+    )
+    show_red = (
+        local_impostor
+        + local_get(red)
+        + this + i32_load8_u(OFF_IS_IMPOSTOR) + I32_AND
+        + this + i32_load(OFF_GAME_CONTROLLER) + i32_const(0) + I32_NE + I32_AND
+        + local_set(red)
+    )
+    green_blue = f32_const(0.0) + f32_const(1.0) + local_get(red) + SELECT
+    set_name = (
+        this + i32_load(OFF_COLOR_NAME) + IF_VOID
+        + local_get(lbl) + this + i32_load(OFF_COLOR_NAME) + i32_const(0) + call(F_SET_TEXT)
+        + END
+    )
     hidden = (
         this + i32_load8_u(OFF_IS_DEAD)
         + this + i32_load8_u(OFF_VENTING) + I32_OR
@@ -98,6 +123,8 @@ def name_tags(nparams, first_local):
         + local_get(lbl) + i32_const(0) + call(F_GET_RENDERER)
         + this + i32_load(OFF_SRENDERER) + i32_const(0) + call(F_GET_ENABLED)
         + i32_const(0) + call(F_SET_ENABLED)
+        + set_name
+        + show_red
         + global_get(STACK_PTR) + local_set(sp)
         + global_get(STACK_PTR) + i32_const(16) + I32_ADD + global_set(STACK_PTR)
         + local_get(sp) + f32_const(1.0) + f32_store(0)
@@ -185,7 +212,7 @@ def main():
     nimp = count_imported_funcs(wasm, imp[2])
     code = next(s for s in secs if s[0] == 10)
 
-    patches = {F_UPDATE: (2, name_tags, 2)}
+    patches = {F_UPDATE: (2, name_tags, 3)}
 
     p = code[2]
     n, p = read_uleb(wasm, p)
