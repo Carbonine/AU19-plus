@@ -16,6 +16,7 @@ F_GET_GAMEOBJECT = 48641
 F_SET_ACTIVE = 48891
 F_GET_ENABLED = 51756
 F_SET_ENABLED = 51757
+F_SPRITE_GET_COLOR = 52491
 
 OFF_USERNAME_TEXT = 36
 OFF_SRENDERER = 32
@@ -127,10 +128,10 @@ def name_tags(nparams, first_local):
         + show_red
         + global_get(STACK_PTR) + local_set(sp)
         + global_get(STACK_PTR) + i32_const(16) + I32_ADD + global_set(STACK_PTR)
+        + local_get(sp) + this + i32_load(OFF_SRENDERER) + i32_const(0) + call(F_SPRITE_GET_COLOR)
         + local_get(sp) + f32_const(1.0) + f32_store(0)
         + local_get(sp) + green_blue + f32_store(4)
         + local_get(sp) + green_blue + f32_store(8)
-        + local_get(sp) + f32_const(1.0) + f32_store(12)
         + local_get(lbl) + local_get(sp) + i32_const(0) + call(F_SET_COLOR)
         + local_get(sp) + global_set(STACK_PTR)
         + END
