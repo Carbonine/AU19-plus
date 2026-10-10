@@ -45,6 +45,7 @@ Matching regular Among Us, alongside the original keys:
 
 ### Bug fixes
 - **Vents:** you can now keep moving between connected vents. In the original game the arrows only appeared at the first vent, so you could move once and then got stuck.
+- **Saved hat:** if your saved hat doesn't exist, it resets to no hat instead of breaking the game.
 
 ## Offline changes (shared with AmongUs2019)
 

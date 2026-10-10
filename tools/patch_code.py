@@ -9,6 +9,11 @@ SRC = os.path.join(os.path.dirname(ROOT), "AmongUs2019", "Build", NAME)
 DST = os.path.join(ROOT, "Build", NAME)
 
 F_STOP_COROUTINE = 51306
+F_GET_HAT_INDEX = 30669
+F_PREFS_GET_INT = 51457
+SHARED_DATA_TYPEINFO = 3617748
+OFF_HATS = 12
+OFF_LIST_SIZE = 12
 F_KILL_TIMER_MOVE_NEXT = 30861
 OFF_KILL_COOLDOWN_TEXT = 72
 OFF_KILL_COOLDOWN = 520
@@ -99,6 +104,7 @@ def read_uleb(b, p):
 
 def local_get(i): return b"\x20" + uleb(i)
 def local_set(i): return b"\x21" + uleb(i)
+def local_tee(i): return b"\x22" + uleb(i)
 def global_get(i): return b"\x23" + uleb(i)
 def global_set(i): return b"\x24" + uleb(i)
 def i32_const(v): return b"\x41" + sleb(v)
@@ -117,6 +123,7 @@ I32_NE = b"\x47"
 I32_EQ = b"\x46"
 I32_LT_S = b"\x48"
 I32_GT_S = b"\x4a"
+I32_GE_S = b"\x4e"
 IF_I32 = b"\x04\x7f"
 ELSE = b"\x05"
 RETURN = b"\x0f"
@@ -272,6 +279,21 @@ def stop_coroutine_null_guard(nparams, first_local):
     return local_get(1) + I32_EQZ + IF_VOID + RETURN + END
 
 
+def saved_hat_in_range(body):
+    body = patch_function(body, 1, lambda nparams, first_local: b"", 3)
+    r, c, t = 1, 2, 3
+    deref = lambda off: local_get(t) + i32_load(off) + local_tee(t) + IF_VOID
+    clamp = (local_set(r) + i32_const(0x7FFFFFFF) + local_set(c)
+             + i32_const(SHARED_DATA_TYPEINFO) + i32_load(0) + local_tee(t) + IF_VOID
+             + deref(OFF_STATIC_FIELDS) + deref(0)
+             + local_get(t) + i32_load(OFF_HATS) + i32_load(OFF_LIST_SIZE) + local_set(c)
+             + END + END + END
+             + local_get(r) + i32_const(0)
+             + local_get(r) + i32_const(0) + I32_GE_S + local_get(r) + local_get(c) + I32_LT_S + I32_AND
+             + SELECT)
+    return replace_once(body, call(F_PREFS_GET_INT), call(F_PREFS_GET_INT) + clamp, "saved hat index")
+
+
 def kill_timer_text(body):
     head = local_get(1) + i32_load(OFF_KILL_COOLDOWN_TEXT) + i32_const(0) + call(F_GET_GAMEOBJECT)
     tail = i32_const(0) + call(F_SET_ACTIVE)
@@ -376,6 +398,7 @@ def main():
         F_ON_CHANGE_KILL_COOLDOWN: kill_cooldown_min,
         F_KILL_TIMER_MOVE_NEXT: kill_timer_text,
         F_START_NEW_ROUND: round_start_kill_cooldown,
+        F_GET_HAT_INDEX: saved_hat_in_range,
     }
 
     p = code[2]
