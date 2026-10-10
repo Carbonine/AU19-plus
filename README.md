@@ -27,6 +27,9 @@ then open <http://localhost:8124/>.
 - **Impostor colouring:** in a match, impostors' names are red only if you are an impostor too, so impostors can see each other. As a crewmate, every name is white.
 - In the lobby, all names are white.
 
+### Bug fixes
+- **Vents:** you can now keep moving between connected vents. In the original game the arrows only appeared at the first vent, so you could move once and then got stuck.
+
 ## Offline changes (shared with AmongUs2019)
 
 - All files are served locally; no requests go to the original site.

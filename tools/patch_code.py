@@ -8,6 +8,10 @@ NAME = "AmongUs2019_WebGL.wasm.code.unityweb"
 SRC = os.path.join(os.path.dirname(ROOT), "AmongUs2019", "Build", NAME)
 DST = os.path.join(ROOT, "Build", NAME)
 
+F_ARROW_ON_MOUSE_DOWN = 30917
+F_SHOW_VENT_DIRECTIONS = 40773
+F_START_COROUTINE = 51301
+OFF_ARROW_TO_VENT = 16
 F_SET_TEXT = 29821
 F_SET_COLOR = 29837
 F_UPDATE = 30941
@@ -139,6 +143,15 @@ def name_tags(nparams, first_local):
     return code
 
 
+def vent_arrows(body):
+    to_vent = local_get(0) + i32_load(OFF_ARROW_TO_VENT)
+    old = to_vent + i32_const(0) + call(F_SHOW_VENT_DIRECTIONS) + b"\x1a"
+    new = to_vent + to_vent + i32_const(0) + call(F_SHOW_VENT_DIRECTIONS) + i32_const(0) + call(F_START_COROUTINE) + b"\x1a"
+    if body.count(old) != 1:
+        sys.exit("vent arrow pattern not found exactly once")
+    return body.replace(old, new)
+
+
 def sections(b):
     p = 8
     out = []
@@ -214,6 +227,7 @@ def main():
     code = next(s for s in secs if s[0] == 10)
 
     patches = {F_UPDATE: (2, name_tags, 3)}
+    replacements = {F_ARROW_ON_MOUSE_DOWN: vent_arrows}
 
     p = code[2]
     n, p = read_uleb(wasm, p)
@@ -225,6 +239,8 @@ def main():
         if f in patches:
             nparams, maker, extra = patches[f]
             body = patch_function(body, nparams, maker, extra)
+        if f in replacements:
+            body = replacements[f](body)
         bodies += uleb(len(body)) + body
         p = q + size
 
@@ -236,7 +252,7 @@ def main():
     c = zlib.compressobj(9, zlib.DEFLATED, -15)
     gz = c.compress(out) + c.flush()
     open(DST, "wb").write(header + gz + struct.pack("<II", zlib.crc32(out) & 0xFFFFFFFF, len(out) & 0xFFFFFFFF))
-    print("patched", len(patches), "function(s) ->", DST)
+    print("patched", len(patches) + len(replacements), "function(s) ->", DST)
 
 
 if __name__ == "__main__":
