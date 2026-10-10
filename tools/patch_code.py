@@ -8,6 +8,18 @@ NAME = "AmongUs2019_WebGL.wasm.code.unityweb"
 SRC = os.path.join(os.path.dirname(ROOT), "AmongUs2019", "Build", NAME)
 DST = os.path.join(ROOT, "Build", NAME)
 
+F_GAME_UPDATE = 30680
+F_CLOSE_SABOTAGE = 30694
+F_SHOW_SABOTAGE = 30793
+F_GET_ACTIVE_SELF = 48892
+F_GET_KEY_DOWN = 64927
+OFF_SABOTAGE_DIALOG = 376
+KEY_TAB = 9
+KEY_ESCAPE = 27
+KEY_SPACE = 32
+KEY_E = 101
+KEY_Q = 113
+KEY_V = 118
 F_ARROW_ON_MOUSE_DOWN = 30917
 F_SHOW_VENT_DIRECTIONS = 40773
 F_START_COROUTINE = 51301
@@ -152,6 +164,41 @@ def vent_arrows(body):
     return body.replace(old, new)
 
 
+def key_down(key):
+    return i32_const(key) + i32_const(0) + call(F_GET_KEY_DOWN)
+
+
+def replace_once(body, old, new, what):
+    if body.count(old) != 1:
+        sys.exit(what + " pattern not found exactly once")
+    return body.replace(old, new)
+
+
+def keybinds_top(nparams, first_local):
+    this = local_get(0)
+    closed = first_local
+    return (
+        this + i32_load(OFF_SABOTAGE_DIALOG) + i32_const(0) + call(F_GET_ACTIVE_SELF) + IF_VOID
+        + key_down(KEY_ESCAPE) + key_down(KEY_TAB) + I32_OR + IF_VOID
+        + this + i32_const(0) + call(F_CLOSE_SABOTAGE)
+        + i32_const(1) + local_set(closed)
+        + END
+        + END
+    )
+
+
+def keybinds_body(body, closed):
+    this = local_get(0)
+    open_sabotage = (
+        key_down(KEY_TAB) + local_get(closed) + I32_EQZ + I32_AND + IF_VOID
+        + this + i32_const(0) + call(F_SHOW_SABOTAGE)
+        + END
+    )
+    body = replace_once(body, key_down(KEY_E), key_down(KEY_E) + key_down(KEY_Q) + I32_OR, "kill key")
+    body = replace_once(body, key_down(KEY_SPACE), open_sabotage + key_down(KEY_SPACE) + key_down(KEY_V) + I32_OR, "vent key")
+    return body
+
+
 def sections(b):
     p = 8
     out = []
@@ -226,8 +273,14 @@ def main():
     nimp = count_imported_funcs(wasm, imp[2])
     code = next(s for s in secs if s[0] == 10)
 
-    patches = {F_UPDATE: (2, name_tags, 3)}
-    replacements = {F_ARROW_ON_MOUSE_DOWN: vent_arrows}
+    patches = {
+        F_UPDATE: (2, name_tags, 3),
+        F_GAME_UPDATE: (2, keybinds_top, 1),
+    }
+    replacements = {
+        F_ARROW_ON_MOUSE_DOWN: vent_arrows,
+        F_GAME_UPDATE: lambda body: keybinds_body(body, 3),
+    }
 
     p = code[2]
     n, p = read_uleb(wasm, p)
@@ -252,7 +305,7 @@ def main():
     c = zlib.compressobj(9, zlib.DEFLATED, -15)
     gz = c.compress(out) + c.flush()
     open(DST, "wb").write(header + gz + struct.pack("<II", zlib.crc32(out) & 0xFFFFFFFF, len(out) & 0xFFFFFFFF))
-    print("patched", len(patches) + len(replacements), "function(s) ->", DST)
+    print("patched", len(set(patches) | set(replacements)), "function(s) ->", DST)
 
 
 if __name__ == "__main__":

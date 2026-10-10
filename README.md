@@ -27,6 +27,17 @@ then open <http://localhost:8124/>.
 - **Impostor colouring:** in a match, impostors' names are red only if you are an impostor too, so impostors can see each other. As a crewmate, every name is white.
 - In the lobby, all names are white.
 
+### Keybinds
+Matching regular Among Us, alongside the original keys:
+
+| Action | Keys |
+| --- | --- |
+| Kill | E or **Q** |
+| Vent | Space or **V** |
+| Report | R |
+| Sabotage map | **Tab** (press again to close) |
+| Close sabotage map | **Esc** |
+
 ### Bug fixes
 - **Vents:** you can now keep moving between connected vents. In the original game the arrows only appeared at the first vent, so you could move once and then got stuck.
 
