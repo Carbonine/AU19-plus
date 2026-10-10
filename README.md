@@ -40,7 +40,7 @@ Matching regular Among Us, alongside the original keys:
 
 ### Kill cooldown down to 0
 - In Customize, the kill cooldown can now go down to **0** (in steps of 5; the original minimum was 20).
-- Round starts and the time after meetings use your setting when it's under 10 seconds, instead of always 10.
+- Round starts and the time after meetings always use your full setting, instead of a fixed 10 seconds.
 - With a 0 cooldown, no number shows on the kill button.
 
 ### Bug fixes

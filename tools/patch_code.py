@@ -284,12 +284,7 @@ def round_start_kill_cooldown(body):
     setting = i32_const(0) + call(F_PREFS_GET_KILL_COOLDOWN)
     tail = i32_const(0) + call(F_START_KILL_TIMER)
     old = local_get(0) + i32_const(ROUND_START_KILL_COOLDOWN) + tail
-    new = (
-        local_get(0)
-        + i32_const(ROUND_START_KILL_COOLDOWN) + setting
-        + setting + i32_const(ROUND_START_KILL_COOLDOWN) + I32_GT_S + SELECT
-        + tail
-    )
+    new = local_get(0) + setting + tail
     return replace_once(body, old, new, "round start kill cooldown")
 
 
