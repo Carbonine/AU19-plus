@@ -38,6 +38,11 @@ Matching regular Among Us, alongside the original keys:
 | Sabotage map | **Tab** (press again to close) |
 | Close sabotage map | **Esc** |
 
+### Kill cooldown down to 0
+- In Customize, the kill cooldown can now go down to **0** (in steps of 5; the original minimum was 20).
+- Round starts and the time after meetings use your setting when it's under 10 seconds, instead of always 10.
+- With a 0 cooldown, no number shows on the kill button.
+
 ### Bug fixes
 - **Vents:** you can now keep moving between connected vents. In the original game the arrows only appeared at the first vent, so you could move once and then got stuck.
 

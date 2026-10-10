@@ -8,6 +8,17 @@ NAME = "AmongUs2019_WebGL.wasm.code.unityweb"
 SRC = os.path.join(os.path.dirname(ROOT), "AmongUs2019", "Build", NAME)
 DST = os.path.join(ROOT, "Build", NAME)
 
+F_STOP_COROUTINE = 51306
+F_KILL_TIMER_MOVE_NEXT = 30861
+OFF_KILL_COOLDOWN_TEXT = 72
+OFF_KILL_COOLDOWN = 520
+F_START_NEW_ROUND = 30672
+F_START_KILL_TIMER = 30673
+F_PREFS_GET_KILL_COOLDOWN = 30674
+ROUND_START_KILL_COOLDOWN = 10
+F_ON_CHANGE_KILL_COOLDOWN = 33508
+KILL_COOLDOWN_OLD_MIN = 20
+KILL_COOLDOWN_MIN = 0
 F_GAME_UPDATE = 30680
 F_CLOSE_SABOTAGE = 30694
 F_SHOW_SABOTAGE = 30793
@@ -104,6 +115,10 @@ I32_OR = b"\x72"
 I32_EQZ = b"\x45"
 I32_NE = b"\x47"
 I32_EQ = b"\x46"
+I32_LT_S = b"\x48"
+I32_GT_S = b"\x4a"
+IF_I32 = b"\x04\x7f"
+ELSE = b"\x05"
 RETURN = b"\x0f"
 
 
@@ -247,6 +262,37 @@ def keybinds_body(body, closed):
     return body
 
 
+def kill_cooldown_min(body):
+    old = i32_const(KILL_COOLDOWN_OLD_MIN) + I32_LT_S + IF_I32 + i32_const(KILL_COOLDOWN_OLD_MIN) + ELSE
+    new = i32_const(KILL_COOLDOWN_MIN) + I32_LT_S + IF_I32 + i32_const(KILL_COOLDOWN_MIN) + ELSE
+    return replace_once(body, old, new, "kill cooldown clamp")
+
+
+def stop_coroutine_null_guard(nparams, first_local):
+    return local_get(1) + I32_EQZ + IF_VOID + RETURN + END
+
+
+def kill_timer_text(body):
+    head = local_get(1) + i32_load(OFF_KILL_COOLDOWN_TEXT) + i32_const(0) + call(F_GET_GAMEOBJECT)
+    tail = i32_const(0) + call(F_SET_ACTIVE)
+    old = head + i32_const(1) + tail
+    new = head + local_get(1) + i32_load(OFF_KILL_COOLDOWN) + i32_const(0) + I32_NE + tail
+    return replace_once(body, old, new, "kill timer text")
+
+
+def round_start_kill_cooldown(body):
+    setting = i32_const(0) + call(F_PREFS_GET_KILL_COOLDOWN)
+    tail = i32_const(0) + call(F_START_KILL_TIMER)
+    old = local_get(0) + i32_const(ROUND_START_KILL_COOLDOWN) + tail
+    new = (
+        local_get(0)
+        + i32_const(ROUND_START_KILL_COOLDOWN) + setting
+        + setting + i32_const(ROUND_START_KILL_COOLDOWN) + I32_GT_S + SELECT
+        + tail
+    )
+    return replace_once(body, old, new, "round start kill cooldown")
+
+
 def sections(b):
     p = 8
     out = []
@@ -296,7 +342,8 @@ def patch_function(body, nparams, make_code, extra_i32_locals):
         groups.append((cnt, typ))
         nlocals += cnt
     first = nparams + nlocals
-    groups.append((extra_i32_locals, 0x7F))
+    if extra_i32_locals:
+        groups.append((extra_i32_locals, 0x7F))
     head = uleb(len(groups)) + b"".join(uleb(c) + bytes([t]) for c, t in groups)
     return head + make_code(nparams, first) + body[p:]
 
@@ -326,10 +373,14 @@ def main():
         F_GAME_UPDATE: (2, keybinds_top, 1),
         F_ARROW_ON_MOUSE_DOWN: (2, arrow_guard, 1),
         F_SHOW_VENT_DIRECTIONS_MOVE_NEXT: (2, vent_directions_guard, 1),
+        F_STOP_COROUTINE: (3, stop_coroutine_null_guard, 0),
     }
     replacements = {
         F_ARROW_ON_MOUSE_DOWN: vent_arrows,
         F_GAME_UPDATE: lambda body: keybinds_body(body, 3),
+        F_ON_CHANGE_KILL_COOLDOWN: kill_cooldown_min,
+        F_KILL_TIMER_MOVE_NEXT: kill_timer_text,
+        F_START_NEW_ROUND: round_start_kill_cooldown,
     }
 
     p = code[2]
