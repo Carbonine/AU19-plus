@@ -23,7 +23,12 @@ KEY_V = 118
 F_ARROW_ON_MOUSE_DOWN = 30917
 F_SHOW_VENT_DIRECTIONS = 40773
 F_START_COROUTINE = 51301
+F_REMOVE_DIRECTIONS = 40774
+F_SHOW_VENT_DIRECTIONS_MOVE_NEXT = 40776
+OFF_ARROW_FROM_VENT = 12
 OFF_ARROW_TO_VENT = 16
+OFF_ENTERING_VENT = 206
+OFF_COROUTINE_STATE = 8
 F_SET_TEXT = 29821
 F_SET_COLOR = 29837
 F_UPDATE = 30941
@@ -98,6 +103,49 @@ I32_AND = b"\x71"
 I32_OR = b"\x72"
 I32_EQZ = b"\x45"
 I32_NE = b"\x47"
+I32_EQ = b"\x46"
+RETURN = b"\x0f"
+
+
+def load_local_player(dst):
+    return (
+        i32_const(0) + i32_load(PLAYER_TYPEINFO) + local_set(dst)
+        + local_get(dst) + IF_VOID + local_get(dst) + i32_load(OFF_STATIC_FIELDS) + local_set(dst) + END
+        + local_get(dst) + IF_VOID + local_get(dst) + i32_load(0) + local_set(dst) + END
+    )
+
+
+def arrow_guard(nparams, first_local):
+    player = first_local
+    return (
+        load_local_player(player)
+        + local_get(player) + IF_VOID
+        + local_get(player) + i32_load8_u(OFF_INSIDE_VENT) + local_set(player)
+        + END
+        + local_get(player) + I32_EQZ + IF_VOID
+        + local_get(0) + i32_load(OFF_ARROW_FROM_VENT) + i32_const(0) + call(F_REMOVE_DIRECTIONS)
+        + RETURN
+        + END
+    )
+
+
+def vent_directions_guard(nparams, first_local):
+    player = first_local
+    return (
+        local_get(0) + i32_load(OFF_COROUTINE_STATE) + i32_const(1) + I32_EQ + IF_VOID
+        + load_local_player(player)
+        + local_get(player) + IF_VOID
+        + local_get(player) + i32_load8_u(OFF_VENTING)
+        + local_get(player) + i32_load8_u(OFF_INSIDE_VENT)
+        + local_get(player) + i32_load8_u(OFF_ENTERING_VENT) + I32_OR
+        + I32_AND + local_set(player)
+        + END
+        + local_get(player) + I32_EQZ + IF_VOID
+        + local_get(0) + i32_const(-1) + b"\x36\x02" + uleb(OFF_COROUTINE_STATE)
+        + i32_const(0) + RETURN
+        + END
+        + END
+    )
 SELECT = b"\x1b"
 IF_VOID = b"\x04\x40"
 END = b"\x0b"
@@ -276,6 +324,8 @@ def main():
     patches = {
         F_UPDATE: (2, name_tags, 3),
         F_GAME_UPDATE: (2, keybinds_top, 1),
+        F_ARROW_ON_MOUSE_DOWN: (2, arrow_guard, 1),
+        F_SHOW_VENT_DIRECTIONS_MOVE_NEXT: (2, vent_directions_guard, 1),
     }
     replacements = {
         F_ARROW_ON_MOUSE_DOWN: vent_arrows,
