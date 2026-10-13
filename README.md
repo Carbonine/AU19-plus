@@ -8,9 +8,7 @@ It is built on top of the unmodded offline copy in the sibling `AmongUs2019` fol
 
 The game must be served from `localhost`. Opening `index.html` directly won't work, and the game only runs on its allowed hosts.
 
-From the parent `Amogus` folder, double-click `play+.command`. It serves this folder and opens <http://localhost:8124/>.
-
-Or run it manually:
+Run it manually:
 
 ```bash
 python3 -m http.server 8124 --bind 127.0.0.1
