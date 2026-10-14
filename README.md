@@ -66,3 +66,10 @@ python3 tools/patch_code.py
 ```
 
 It needs Python 3 and the `AmongUs2019` folder next to `AU19+`.
+
+## Planned Features
+### Other Maps from Among Us
+- **Polus**
+    - Including new tasks (possibly), a unique vent system, new sabotages, and adaptive pathfinding
+- **Mira**
+    - Including an interconnected vent system, new tasks (possibly) adaptive pathfinding, and new sabotages.
